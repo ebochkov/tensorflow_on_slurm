@@ -7,10 +7,22 @@ import os
 import tensorflow as tf
 import numpy as np
 import sys
+import argparse
 import time
-from tensorflow_on_slurm import tf_config_from_slurm
 
-cluster, my_job_name, my_task_index = tf_config_from_slurm(ps_number=1)
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--job_name', help='Job type - "ps" (parameter server) or "worker".')
+parser.add_argument('--task_index', help='Task index of specific work type, int.', type=int)
+parser.add_argument('--worker_list', help='Workers hosts, list of ip:port values separated by comma.')
+parser.add_argument('--ps_host', help='Parameter server host:ip.')
+args = vars(parser.parse_args())
+
+my_job_name = args['job_name']
+my_task_index = args['task_index']
+worker_list = map(lambda x: x.stip(), args['worker_list'].split(',')) if ',' in args['worker_list'] else [args['worker_list']]
+
+cluster = {"worker": worker_list, "ps": [args["ps_host"]]}
 cluster_spec = tf.train.ClusterSpec(cluster)
 server = tf.train.Server(server_or_cluster_def=cluster_spec,
                          job_name=my_job_name,
