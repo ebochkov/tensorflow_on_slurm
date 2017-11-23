@@ -107,7 +107,7 @@ with tf.device('/job:worker/task:{}'.format(my_task_index)):
     h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
     
     # DROPOUT
-    keep_prob = tf.placeholder(tf.float32)
+    keep_prob = tf.placeholder(tf.float32, name='keep_prob')
     h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob)
     
     # SOFTMAX
@@ -120,15 +120,16 @@ with tf.device('/job:worker/task:{}'.format(my_task_index)):
     opt = tf.train.AdamOptimizer(1e-3)
     opt = tf.train.SyncReplicasOptimizer(opt, replicas_to_aggregate=len(cluster['worker']),
                                 total_num_replicas=len(cluster['worker']))
-    global_step = bias_variable([])
+    #global_step = bias_variable([])
+    global_step = tf.Variable(0, name='global_step', trainable=False)
     train_step = opt.minimize(loss, global_step=global_step)
     sync_replicas_hook = opt.make_session_run_hook(is_chief)
     
     y_hat = tf.round(tf.argmax(tf.nn.softmax(y_conv), 1))
     y_hat = tf.cast(y_hat, tf.uint8)
-    y_hat = tf.reshape(y_hat, [-1, 1])
+    y_hat = tf.reshape(y_hat, [-1, 1], name='y_hat')
     correct_prediction = tf.equal(y_hat, y)
-    accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+    accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32), name='accuracy')
 
 def batch_generator(data, labels, batch_size=32):
     x_batch, y_batch = [], []
@@ -142,9 +143,17 @@ def batch_generator(data, labels, batch_size=32):
 
 batch_size = 128
 step = 0
-sess = tf.train.MonitoredTrainingSession(master=server.target, is_chief=is_chief,
-                                         hooks=[sync_replicas_hook])
 
+saving_step = (len(data) // batch_size) - 1
+print('Save model every %d-th step' % saving_step)
+ckpt_saver_hook = tf.train.CheckpointSaverHook(checkpoint_dir='./model_ckpts/',
+                                                   saver=tf.train.Saver(),
+                                                   save_steps=saving_step)
+
+sess = tf.train.MonitoredTrainingSession(master=server.target, is_chief=is_chief,
+                                         hooks=[sync_replicas_hook, ckpt_saver_hook])
+
+begin_time = time.time()
 for i in range(epochs):
     bg = batch_generator(data, labels, batch_size)
     for j, (data_batch, label_batch) in enumerate(bg):
@@ -157,3 +166,4 @@ for i in range(epochs):
         step += 1
         print(step, my_task_index, loss_, acc)
         sys.stdout.flush()
+print("Total Time: %3.2fs" % float(time.time() - begin_time))

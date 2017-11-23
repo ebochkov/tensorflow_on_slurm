@@ -1,2 +1,7 @@
 *.idea
 *.iml
+*.pyc
+.ipynb_checkpoints
+cifar-10-batches-py
+cifar-10-python.tar.gz
+model_ckpts
