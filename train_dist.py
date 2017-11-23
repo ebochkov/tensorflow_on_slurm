@@ -21,7 +21,7 @@ args = vars(parser.parse_args())
 
 my_job_name = args['job_name']
 my_task_index = args['task_index']
-worker_list = map(lambda x: x.stip(), args['worker_list'].split(',')) if ',' in args['worker_list'] else [args['worker_list']]
+worker_list = map(lambda x: x.strip(), args['worker_list'].split(',')) if ',' in args['worker_list'] else [args['worker_list']]
 epochs = args['epochs']
 
 cluster = {"worker": worker_list, "ps": [args["ps_host"]]}
