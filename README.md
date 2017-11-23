@@ -1,4 +1,4 @@
-# Tensorflow on Slurm
+# Tensorflow distributed example
 
 An example of distributed Tensorflow training based on [Between-graph](https://www.tensorflow.org/deploy/distributed) replication strategy.
 
