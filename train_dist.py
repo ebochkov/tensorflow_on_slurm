@@ -16,11 +16,13 @@ parser.add_argument('--job_name', help='Job type - "ps" (parameter server) or "w
 parser.add_argument('--task_index', help='Task index of specific work type, int.', type=int)
 parser.add_argument('--worker_list', help='Workers hosts, list of ip:port values separated by comma.')
 parser.add_argument('--ps_host', help='Parameter server host:ip.')
+parser.add_argument('--epochs', help='Number epochs to run, int. Default - 10.', type=int, default=10)
 args = vars(parser.parse_args())
 
 my_job_name = args['job_name']
 my_task_index = args['task_index']
 worker_list = map(lambda x: x.stip(), args['worker_list'].split(',')) if ',' in args['worker_list'] else [args['worker_list']]
+epochs = args['epochs']
 
 cluster = {"worker": worker_list, "ps": [args["ps_host"]]}
 cluster_spec = tf.train.ClusterSpec(cluster)
@@ -138,7 +140,6 @@ def batch_generator(data, labels, batch_size=32):
             x_batch = []
             y_batch = []
 
-epochs = 1000
 batch_size = 128
 step = 0
 sess = tf.train.MonitoredTrainingSession(master=server.target, is_chief=is_chief,
